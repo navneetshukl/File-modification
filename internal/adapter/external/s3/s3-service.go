@@ -16,8 +16,8 @@ import (
 )
 
 type S3Service interface {
-	UploadToS3() error
-	DownloadFromS3() error
+	UploadToS3(ctx context.Context, objectKey, fileName string) error
+	DownloadFromS3(ctx context.Context, objectKey string, fileName string) error
 }
 
 func NewS3ServiceImpl() (*S3ServiceImpl, error) {
