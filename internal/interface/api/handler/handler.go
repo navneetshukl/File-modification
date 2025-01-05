@@ -31,10 +31,10 @@ func (h *Handler) UploadFile(c *fiber.Ctx) error {
 		})
 	}
 
-	// Ensure the uploaded file is a PDF
-	if filepath.Ext(file.Filename) != ".pdf" {
+	// Ensure the uploaded file is a CSV
+	if filepath.Ext(file.Filename) != ".csv" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Only PDF files are allowed",
+			"error": "Only CSV files are allowed",
 		})
 	}
 
@@ -61,7 +61,7 @@ func (h *Handler) UploadFile(c *fiber.Ctx) error {
 		"message": "File uploaded successfully",
 		"path":    savePath,
 	})
-
 }
+
 
 

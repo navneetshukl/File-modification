@@ -1,11 +1,11 @@
 package main
 
 import (
-	"file-modification/internal/adapter/external/pdf"
+	"file-modification/internal/adapter/external/csv"
 	s3Service "file-modification/internal/adapter/external/s3"
 	routes "file-modification/internal/interface/api"
-	pdfImpl"file-modification/internal/usecase/pdf"
 	"file-modification/internal/interface/api/handler"
+	csvImpl "file-modification/internal/usecase/csv"
 	"log"
 
 	"github.com/joho/godotenv"
@@ -24,11 +24,10 @@ func main() {
 		return
 	}
 
-	pdfService:=pdf.NewPDFService()
-	pdfUsecase:=pdfImpl.NewPdfServiceImpl(pdfService)
+	csvService := csv.NewCSVService()
+	csvUseCase := csvImpl.NewCsvUseCaseImpl(csvService)
 
-	pdfUsecase.ReadPDF("scholarship.pdf")
-
+	csvUseCase.ReadCSV("resume.pdf")
 
 	h := handler.NewHandler()
 	app := routes.SetupRoutes(h)
