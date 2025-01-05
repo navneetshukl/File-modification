@@ -2,7 +2,10 @@ package pdf
 
 import (
 	"bytes"
+	"errors"
 	"log"
+	"os"
+
 	"github.com/ledongthuc/pdf"
 )
 
@@ -17,6 +20,16 @@ func NewPDFService() *PdfServiceImpl {
 }
 
 func (p *PdfServiceImpl) ReadPDF(fileName string) (string, error) {
+
+	info, err := os.Stat(fileName)
+	if os.IsNotExist(err) {
+		log.Println("File does not exist:", fileName)
+		return "", errors.New("file does not exist")
+	}
+	if info.Size() == 0 {
+		log.Println("File is empty:", fileName)
+		return "", errors.New("file is empty")
+	}
 	f, r, err := pdf.Open(fileName)
 
 	if err != nil {

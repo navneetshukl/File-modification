@@ -8,12 +8,14 @@ import (
 
 func SetupRoutes(h *handler.Handler) *fiber.App {
 
-	routes:=fiber.New()
+	routes := fiber.New()
 
 	routes.Post("/upload", h.UploadFile)
+	routes.Get("/", func(c *fiber.Ctx) error {
+		// Serve the upload.html file
+		return c.SendFile("static/html/upload.html")
+	})
 
 	return routes
-
-
 
 }
