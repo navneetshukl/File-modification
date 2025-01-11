@@ -17,7 +17,6 @@ func NewCsvUseCaseImpl(csv csv.CSVService) *CsvServiceImpl {
 }
 
 func (p *CsvServiceImpl) ReadCSV(fileName string) error {
-	fileName = "uploads/resume.pdf"
 
 	str, err := p.CsvReader.ReadCSV(fileName)
 	if err != nil {
@@ -27,6 +26,6 @@ func (p *CsvServiceImpl) ReadCSV(fileName string) error {
 
 	}
 
-	fmt.Println(str)
+	fmt.Println(str[0])
 	return nil
 }

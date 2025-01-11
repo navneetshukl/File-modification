@@ -27,7 +27,7 @@ func main() {
 	csvService := csv.NewCSVService()
 	csvUseCase := csvImpl.NewCsvUseCaseImpl(csvService)
 
-	csvUseCase.ReadCSV("resume.pdf")
+	csvUseCase.ReadCSV("data.csv")
 
 	h := handler.NewHandler()
 	app := routes.SetupRoutes(h)
