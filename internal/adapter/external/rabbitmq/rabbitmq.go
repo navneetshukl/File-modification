@@ -1,22 +1,40 @@
 package rabbitmq
 
 import (
-	"file-modification/internal/adapter/external/csv"
+	"context"
+	"encoding/json"
 	"log"
+	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const LineChunk int = 1000
-
 type RabbitMQ struct {
-	RabbitMQStruct QueueStruct
-	CSRService     csv.CSVService
+	Queue   *amqp.Queue
+	Channel *amqp.Channel
 }
 
-func (r *RabbitMQ) SendCSVToQueueue(fileName string) error {
+func (r *RabbitMQ) SendCSVToQueueue(data []string) error {
 
-	_, err := r.CSRService.ReadCSV(fileName)
+	dataByte, err := json.Marshal(data)
 	if err != nil {
-		log.Println("Error in getting the csv data ", err)
+		log.Println("error in converting to byte ", err)
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = r.Channel.PublishWithContext(ctx,
+		"",
+		r.Queue.Name,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        dataByte,
+		})
+	if err != nil {
+		log.Println("failed to publish a message:", err)
 		return err
 	}
 

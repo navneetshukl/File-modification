@@ -1,7 +1,6 @@
 package rabbitmq
 
 import (
-	"file-modification/internal/adapter/external/csv"
 	"log"
 	"os"
 
@@ -9,15 +8,10 @@ import (
 )
 
 type RabbitMQService interface {
-	SendCSVToQueueue(fileName string) error
+	SendCSVToQueueue(data []string) error
 }
 
-type QueueStruct struct {
-	Queue   *amqp.Queue
-	Channel *amqp.Channel
-}
-
-func ConnectToRabbitMQ() (*QueueStruct, error) {
+func ConnectToRabbitMQ() (*RabbitMQ, error) {
 	RABBIT_MQ_CONNECTION_STRING := os.Getenv("RABBIT_MQ_CONNECTION_STRING")
 	QUEUE_NAME := os.Getenv("QUEUE_NAME")
 	conn, err := amqp.Dial(RABBIT_MQ_CONNECTION_STRING)
@@ -26,14 +20,14 @@ func ConnectToRabbitMQ() (*QueueStruct, error) {
 		return nil, err
 	}
 
-	defer conn.Close()
+	//defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Println("Error in creating channel", err)
 		return nil, err
 	}
-	defer ch.Close()
+	//defer ch.Close()
 
 	q, err := ch.QueueDeclare(
 		QUEUE_NAME,
@@ -49,17 +43,6 @@ func ConnectToRabbitMQ() (*QueueStruct, error) {
 		return nil, err
 	}
 
-	return &QueueStruct{Queue: &q, Channel: ch}, nil
-
-}
-
-func NewRabbitMQService(csv csv.CSVService) (*RabbitMQ, error) {
-	rabbitStruct, err := ConnectToRabbitMQ()
-	if err != nil {
-		log.Println("Error in connecting to rabbitmq", err)
-		return nil, err
-	}
-	queueStruct := &QueueStruct{Queue: rabbitStruct.Queue, Channel: rabbitStruct.Channel}
-	return &RabbitMQ{RabbitMQStruct: *queueStruct, CSRService: csv}, nil
+	return &RabbitMQ{Queue: &q, Channel: ch}, nil
 
 }

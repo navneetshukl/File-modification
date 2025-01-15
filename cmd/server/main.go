@@ -2,6 +2,7 @@ package main
 
 import (
 	"file-modification/internal/adapter/external/csv"
+	"file-modification/internal/adapter/external/rabbitmq"
 	s3Service "file-modification/internal/adapter/external/s3"
 	routes "file-modification/internal/interface/api"
 	"file-modification/internal/interface/api/handler"
@@ -25,7 +26,12 @@ func main() {
 	}
 
 	csvService := csv.NewCSVService()
-	csvUseCase := csvImpl.NewCsvUseCaseImpl(csvService)
+	rabbitService, err := rabbitmq.ConnectToRabbitMQ()
+	if err != nil {
+		log.Println("Error in connecting to rabbitmq")
+		return
+	}
+	csvUseCase := csvImpl.NewCsvUseCaseImpl(csvService, rabbitService)
 
 	csvUseCase.ReadCSV("data.csv")
 
