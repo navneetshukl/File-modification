@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"file-modification/internal/core/csv"
 	"fmt"
 	"log"
@@ -46,7 +47,7 @@ func (h *Handler) UploadFile(c *fiber.Ctx) error {
 	// Define the destination path
 	savePath := fmt.Sprintf("./uploads/%s", file.Filename)
 
-	log.Println("Save path is ",savePath)
+	log.Println("Save path is ", savePath)
 
 	// Create the uploads directory if it doesn't exist
 	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
@@ -64,7 +65,7 @@ func (h *Handler) UploadFile(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.csvUseCase.ReadCSV(file.Filename)
+	err = h.csvUseCase.ReadCSV(context.Background(), file.Filename)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "something went wrong",

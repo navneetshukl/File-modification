@@ -1,5 +1,7 @@
 package csv
 
+import "context"
+
 type CSVUseCase interface {
-	ReadCSV(fileName string) error
+	ReadCSV(ctx context.Context, fileName string) error
 }
