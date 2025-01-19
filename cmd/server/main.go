@@ -33,9 +33,9 @@ func main() {
 	}
 	csvUseCase := csvImpl.NewCsvUseCaseImpl(csvService, rabbitService)
 
-	csvUseCase.ReadCSV("data.csv")
+	//csvUseCase.ReadCSV("data.csv")
 
-	h := handler.NewHandler()
+	h := handler.NewHandler(csvUseCase)
 	app := routes.SetupRoutes(h)
 	app.Listen(":8080")
 

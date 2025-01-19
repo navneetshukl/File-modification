@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"file-modification/internal/core/csv"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -9,10 +11,13 @@ import (
 )
 
 type Handler struct {
+	csvUseCase csv.CSVUseCase
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(csv csv.CSVUseCase) *Handler {
+	return &Handler{
+		csvUseCase: csv,
+	}
 }
 
 func (h *Handler) UploadFile(c *fiber.Ctx) error {
@@ -41,6 +46,8 @@ func (h *Handler) UploadFile(c *fiber.Ctx) error {
 	// Define the destination path
 	savePath := fmt.Sprintf("./uploads/%s", file.Filename)
 
+	log.Println("Save path is ",savePath)
+
 	// Create the uploads directory if it doesn't exist
 	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
 		if err := os.Mkdir("./uploads", os.ModePerm); err != nil {
@@ -57,11 +64,15 @@ func (h *Handler) UploadFile(c *fiber.Ctx) error {
 		})
 	}
 
+	err = h.csvUseCase.ReadCSV(file.Filename)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "something went wrong",
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "File uploaded successfully",
 		"path":    savePath,
 	})
 }
-
-
-

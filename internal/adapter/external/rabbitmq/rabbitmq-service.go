@@ -8,7 +8,8 @@ import (
 )
 
 type RabbitMQService interface {
-	SendCSVToQueueue(data []string) error
+	SendCSVToQueueue(idx int, data []string) error
+	ReceiveFromQueue() (<-chan amqp.Delivery, error)
 }
 
 func ConnectToRabbitMQ() (*RabbitMQ, error) {

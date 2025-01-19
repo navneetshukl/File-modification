@@ -14,9 +14,21 @@ type RabbitMQ struct {
 	Channel *amqp.Channel
 }
 
-func (r *RabbitMQ) SendCSVToQueueue(data []string) error {
+type queueData struct {
+	OpType   int      `json:"op_type"`
+	Sequence int      `json:"sequence"`
+	Data     []string `json:"data"`
+}
 
-	dataByte, err := json.Marshal(data)
+func (r *RabbitMQ) SendCSVToQueueue(seq int, csvdata []string) error {
+
+	qdata := &queueData{
+		OpType:   1,
+		Sequence: seq,
+		Data:     csvdata,
+	}
+
+	dataByte, err := json.Marshal(qdata)
 	if err != nil {
 		log.Println("error in converting to byte ", err)
 		return err
@@ -39,5 +51,23 @@ func (r *RabbitMQ) SendCSVToQueueue(data []string) error {
 	}
 
 	return nil
+
+}
+
+func (r *RabbitMQ) ReceiveFromQueue() (<-chan amqp.Delivery, error) {
+	msgs, err := r.Channel.Consume(
+		r.Queue.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Println("error in consuming from queue ", err)
+		return nil, err
+	}
+	return msgs, nil
 
 }
