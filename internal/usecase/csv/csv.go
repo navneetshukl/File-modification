@@ -34,15 +34,22 @@ func (p *CsvServiceImpl) ReadCSV(fileName string) error {
 		}
 	}
 
-	msg,err:=p.RabbitSvc.ReceiveFromQueue()
+	msg, err := p.RabbitSvc.ReceiveFromQueue()
 	if err != nil {
 		log.Printf("Error in reading the pdf %s.Error is %v\n", fileName, err)
 		return err
 
 	}
+	ch := make(chan bool)
 
-	for d := range msg {
-		log.Printf("Received a message: %s", d.Body)
-	}
+	go func() {
+		for d := range msg {
+			log.Println("Received message from queue ", string(d.Body))
+		}
+		ch<-true
+	}()
+
+	<-ch
+
 	return nil
 }
