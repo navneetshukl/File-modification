@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"sync"
+
+	"github.com/rabbitmq/amqp091-go"
 )
 
 type CsvServiceImpl struct {
@@ -16,6 +18,8 @@ type CsvServiceImpl struct {
 	RabbitSvc    rabbitmq.RabbitMQService
 	wg           *sync.WaitGroup
 	size         int
+	numWorkers   int
+	taksk        int
 }
 
 func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService) *CsvServiceImpl {
@@ -23,6 +27,7 @@ func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService) *CsvSe
 		CsvReaderSvc: csv,
 		RabbitSvc:    rabb,
 		wg:           &sync.WaitGroup{},
+		numWorkers:   5,
 	}
 }
 
@@ -35,6 +40,7 @@ func (p *CsvServiceImpl) ReadCSV(ctx context.Context, fileName string) error {
 
 	}
 	p.size = len(str)
+	p.taksk = p.size
 	fmt.Println("size is ", p.size)
 	for idx, val := range str {
 		err := p.RabbitSvc.SendCSVToQueueue(idx+1, val)
@@ -57,18 +63,35 @@ func (p *CsvServiceImpl) processCSV() error {
 
 	}
 
+	tasks := make(chan amqp091.Delivery, p.numWorkers)
+	for w := 1; w <= p.numWorkers; w++ {
+		p.wg.Add(1)
+		go p.processEachRow(context.Background(), tasks, p.wg)
+	}
+
 	for d := range msg {
+		tasks <- d
+	}
+	p.wg.Wait()
+	close(tasks)
+
+	return nil
+}
+
+func (p *CsvServiceImpl) processEachRow(ctx context.Context, tasks <-chan amqp091.Delivery, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for d := range tasks {
 		data := csvCore.CSVData{}
 		err := json.Unmarshal(d.Body, &data)
 		if err != nil {
 			log.Println("error in unmarshalling the data ", err)
 		}
-		fmt.Println("Received a message: ", data)
-		if data.Sequence == p.size {
-			break
-		}
+		if data.OperationType == 1 {
+			fmt.Println("Received a message: ", data)
 
+			// do some task
+		}
 	}
 
-	return nil
 }
