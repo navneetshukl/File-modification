@@ -20,6 +20,7 @@ type queueData struct {
 	Data     []string `json:"data"`
 }
 
+// SendCSVToQueueue sends the csv data to the queue
 func (r *RabbitMQ) SendCSVToQueueue(seq int, csvdata []string) error {
 
 	qdata := &queueData{
@@ -54,6 +55,7 @@ func (r *RabbitMQ) SendCSVToQueueue(seq int, csvdata []string) error {
 
 }
 
+// ReceiveFromQueue receives the data from the queue
 func (r *RabbitMQ) ReceiveFromQueue() (<-chan amqp.Delivery, error) {
 	msgs, err := r.Channel.Consume(
 		r.Queue.Name,

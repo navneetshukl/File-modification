@@ -2,8 +2,11 @@ package csv
 
 import (
 	"context"
+	"encoding/json"
 	"file-modification/internal/adapter/external/csv"
 	"file-modification/internal/adapter/external/rabbitmq"
+	csvCore "file-modification/internal/core/csv"
+	"fmt"
 	"log"
 	"sync"
 )
@@ -12,6 +15,7 @@ type CsvServiceImpl struct {
 	CsvReaderSvc csv.CSVService
 	RabbitSvc    rabbitmq.RabbitMQService
 	wg           *sync.WaitGroup
+	size         int
 }
 
 func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService) *CsvServiceImpl {
@@ -30,6 +34,8 @@ func (p *CsvServiceImpl) ReadCSV(ctx context.Context, fileName string) error {
 		return err
 
 	}
+	p.size = len(str)
+	fmt.Println("size is ", p.size)
 	for idx, val := range str {
 		err := p.RabbitSvc.SendCSVToQueueue(idx+1, val)
 		if err != nil {
@@ -38,26 +44,7 @@ func (p *CsvServiceImpl) ReadCSV(ctx context.Context, fileName string) error {
 		}
 	}
 
-	// msg, err := p.RabbitSvc.ReceiveFromQueue()
-	// if err != nil {
-	// 	log.Printf("Error in reading the pdf %s.Error is %v\n", fileName, err)
-	// 	return err
-
-	// }
-	// ch := make(chan int)
-
-	// go func() {
-	// 	defer close(ch)
-	// 	for d := range msg {
-	// 		log.Println("Received message from queue ", string(d.Body))
-
-	// 	}
-
-	// }()
-
-	// for val:=range ch {
-	// 	log.Println("val is ",val)
-	// }
+	p.processCSV()
 
 	return nil
 }
@@ -70,16 +57,18 @@ func (p *CsvServiceImpl) processCSV() error {
 
 	}
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
-		for d := range msg {
-			log.Println("Received message from queue ", string(d.Body))
-
+	for d := range msg {
+		data := csvCore.CSVData{}
+		err := json.Unmarshal(d.Body, &data)
+		if err != nil {
+			log.Println("error in unmarshalling the data ", err)
+		}
+		fmt.Println("Received a message: ", data)
+		if data.Sequence == p.size {
+			break
 		}
 
-	}()
-	p.wg.Wait()
+	}
 
 	return nil
 }
