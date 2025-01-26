@@ -8,7 +8,7 @@ import (
 )
 
 type RabbitMQService interface {
-	SendCSVToQueueue(idx int, data []string) error
+	SendCSVToQueueue(optype int,idx int, data []string) error
 	ReceiveFromQueue() (<-chan amqp.Delivery, error)
 }
 

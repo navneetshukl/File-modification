@@ -8,6 +8,7 @@ import (
 	csvCore "file-modification/internal/core/csv"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/rabbitmq/amqp091-go"
@@ -20,6 +21,7 @@ type CsvServiceImpl struct {
 	size         int
 	numWorkers   int
 	taksk        int
+	pdf          [][]string
 }
 
 func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService) *CsvServiceImpl {
@@ -28,6 +30,7 @@ func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService) *CsvSe
 		RabbitSvc:    rabb,
 		wg:           &sync.WaitGroup{},
 		numWorkers:   5,
+		pdf:          [][]string{},
 	}
 }
 
@@ -43,7 +46,7 @@ func (p *CsvServiceImpl) ReadCSV(ctx context.Context, fileName string) error {
 	p.taksk = p.size
 	fmt.Println("size is ", p.size)
 	for idx, val := range str {
-		err := p.RabbitSvc.SendCSVToQueueue(idx+1, val)
+		err := p.RabbitSvc.SendCSVToQueueue(1, idx+1, val)
 		if err != nil {
 			log.Printf("Error in sending the pdf %s.Error is %v\n", fileName, err)
 			return err
@@ -60,26 +63,25 @@ func (p *CsvServiceImpl) processCSV() error {
 	if err != nil {
 		log.Println("error in reading from the queue ", err)
 		return err
-
 	}
-
 	tasks := make(chan amqp091.Delivery, p.numWorkers)
 	for w := 1; w <= p.numWorkers; w++ {
 		p.wg.Add(1)
-		go p.processEachRow(context.Background(), tasks, p.wg)
+		go p.processEachRow(tasks)
 	}
 
-	for d := range msg {
-		tasks <- d
+	for i := 0; i < p.size; i++ {
+		tasks <- <-msg
 	}
-	p.wg.Wait()
+
 	close(tasks)
-
+	p.wg.Wait()
+	fmt.Println("Total pdf ", len(p.pdf))
 	return nil
 }
 
-func (p *CsvServiceImpl) processEachRow(ctx context.Context, tasks <-chan amqp091.Delivery, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (p *CsvServiceImpl) processEachRow(tasks <-chan amqp091.Delivery) {
+	defer p.wg.Done()
 
 	for d := range tasks {
 		data := csvCore.CSVData{}
@@ -88,10 +90,19 @@ func (p *CsvServiceImpl) processEachRow(ctx context.Context, tasks <-chan amqp09
 			log.Println("error in unmarshalling the data ", err)
 		}
 		if data.OperationType == 1 {
-			fmt.Println("Received a message: ", data)
+			str := []string{}
+			fmt.Println("Inside operation type 1")
+			for _, val := range data.Data {
+				s := strings.ToUpper(val)
+				str = append(str, s)
+			}
+			// err := p.RabbitSvc.SendCSVToQueueue(2, data.Sequence, str)
+			// if err != nil {
+			// 	log.Println("error in sending the data to the queue ", err)
+			// 	return
+			// }
 
-			// do some task
+			p.pdf = append(p.pdf, str)
 		}
 	}
-
 }

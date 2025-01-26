@@ -21,10 +21,10 @@ type queueData struct {
 }
 
 // SendCSVToQueueue sends the csv data to the queue
-func (r *RabbitMQ) SendCSVToQueueue(seq int, csvdata []string) error {
+func (r *RabbitMQ) SendCSVToQueueue(optype int, seq int, csvdata []string) error {
 
 	qdata := &queueData{
-		OpType:   1,
+		OpType:   optype,
 		Sequence: seq,
 		Data:     csvdata,
 	}
