@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"file-modification/internal/adapter/external/csv"
+	"file-modification/internal/adapter/external/pdf"
 	"file-modification/internal/adapter/external/rabbitmq"
 	csvCore "file-modification/internal/core/csv"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"sync"
 
@@ -17,20 +19,22 @@ import (
 type CsvServiceImpl struct {
 	CsvReaderSvc csv.CSVService
 	RabbitSvc    rabbitmq.RabbitMQService
+	PdfSvc       pdf.PDFService
 	wg           *sync.WaitGroup
 	size         int
 	numWorkers   int
 	taksk        int
-	pdf          [][]string
+	pdf          []csvCore.CSVData
 }
 
-func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService) *CsvServiceImpl {
+func NewCsvUseCaseImpl(csv csv.CSVService, rabb rabbitmq.RabbitMQService, pdf pdf.PDFService) *CsvServiceImpl {
 	return &CsvServiceImpl{
 		CsvReaderSvc: csv,
 		RabbitSvc:    rabb,
 		wg:           &sync.WaitGroup{},
 		numWorkers:   5,
-		pdf:          [][]string{},
+		pdf:          make([]csvCore.CSVData, 0),
+		PdfSvc:       pdf,
 	}
 }
 
@@ -77,6 +81,13 @@ func (p *CsvServiceImpl) processCSV() error {
 	close(tasks)
 	p.wg.Wait()
 	fmt.Println("Total pdf ", len(p.pdf))
+
+	err = p.convertToPDF()
+	if err != nil {
+		log.Println("error in converting to pdf ", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -102,7 +113,35 @@ func (p *CsvServiceImpl) processEachRow(tasks <-chan amqp091.Delivery) {
 			// 	return
 			// }
 
-			p.pdf = append(p.pdf, str)
+			pdfData := csvCore.CSVData{
+				OperationType: 2,
+				Sequence:      data.Sequence,
+				Data:          str,
+			}
+
+			p.pdf = append(p.pdf, pdfData)
 		}
 	}
+}
+
+func (p *CsvServiceImpl) convertToPDF() error {
+	sort.Slice(p.pdf, func(i, j int) bool {
+		return p.pdf[i].Sequence < p.pdf[j].Sequence
+	})
+
+	fmt.Println("pdf data is ", p.pdf[0].Data)
+
+	pdfData := [][]string{}
+
+	for _, val := range p.pdf {
+		pdfData = append(pdfData, val.Data)
+	}
+
+	err := p.PdfSvc.ConvertToPDF("data.pdf", pdfData)
+	if err != nil {
+		log.Println("error in converting to pdf ", err)
+		return err
+	}
+	return nil
+
 }
